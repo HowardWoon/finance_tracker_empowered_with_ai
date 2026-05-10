@@ -1,6 +1,6 @@
-# Finance Tracker - Python Backend
+# Market Intelligence Backend
 
-This directory contains the Python backend for the Finance Tracker application, powered by AI and Polymarket analysis.
+This directory contains the Python backend for the market intelligence toolkit, powered by AI and Polymarket analysis.
 
 ## Features
 
@@ -15,7 +15,7 @@ This directory contains the Python backend for the Finance Tracker application, 
   - Full type hints for IDE support
   - Structured logging
 
-## Current Holdings
+## Reference Position
 
 **TNG e-Mas (Malaysian Gold Investment)**
 - Amount: 0.426118g
@@ -154,4 +154,4 @@ Included in main repository license
 
 ## Author
 
-Howard Woon - Finance Tracker Project
+Howard Woon

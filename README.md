@@ -1,14 +1,14 @@
-# finance_tracker_empowered_with_ai
+# Market Intelligence Toolkit
 
-Polymarket and precious-metals analysis toolkit with a Python codebase, connection pooling, caching, retries, and AI-assisted trade reporting.
+Market intelligence and metals analysis toolkit with a Python backend, connection pooling, caching, retries, and AI-assisted reporting.
 
-## What This Repo Does
+## Purpose
 
-This repository now focuses on the backend analysis tooling only.
+This repository is focused on one thing: generating actionable analysis from live market and metals data.
 
 - Fetches and scores Polymarket markets
-- Generates trade reports from live data
-- Tracks gold and silver prices, including TNG eMas holdings
+- Produces trade reports from live data
+- Tracks gold and silver prices, including a personal reference position
 - Uses local Ollama analysis when available
 - Writes CSV reports for later review
 
