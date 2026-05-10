@@ -12,6 +12,15 @@ import subprocess
 
 import pandas as pd
 
+
+def _read_last_line(file_path):
+    last_line = None
+    with open(file_path, 'r', encoding='utf-8', errors='ignore') as handle:
+        for line in handle:
+            if line.strip():
+                last_line = line.strip()
+    return last_line
+
 def get_processed_df(df):
     markets_df = get_markets()
     markets_df = markets_df.rename({'id': 'market_id'})
@@ -96,39 +105,51 @@ def get_processed_df(df):
 
 def process_live():
     processed_file = 'processed/trades.csv'
+    source_file = 'goldsky/orderFilled.csv'
 
     print("=" * 60)
-    print("🔄 Processing Live Trades")
+    print("Processing Live Trades")
     print("=" * 60)
+
+    if not os.path.exists(source_file):
+        print(f"[!] Missing source file: {source_file}")
+        return
+
+    if not (os.path.exists('markets.csv') or os.path.exists('missing_markets.csv')):
+        print("[!] Missing market metadata files: markets.csv or missing_markets.csv")
+        return
 
     last_processed = None
 
     if os.path.exists(processed_file):
-        print(f"✓ Found existing processed file: {processed_file}")
-        result = subprocess.run(['tail', '-n', '1', processed_file], capture_output=True, text=True)
-        last_line = result.stdout.strip()
-        splitted = last_line.split(',')
+        print(f"[OK] Found existing processed file: {processed_file}")
+        last_line = _read_last_line(processed_file)
+        if not last_line:
+            print("[!] Processed file is empty; processing from beginning")
+            last_processed = None
+        else:
+            splitted = last_line.split(',')
 
-        last_processed = {
-            'timestamp': pd.to_datetime(splitted[0]),
-            'transactionHash': splitted[-1],
-            'maker': splitted[2],
-            'taker': splitted[3],
-        }
+            last_processed = {
+                'timestamp': pd.to_datetime(splitted[0]),
+                'transactionHash': splitted[-1],
+                'maker': splitted[2],
+                'taker': splitted[3],
+            }
 
-        print(f"📍 Resuming from: {last_processed['timestamp']}")
-        print(f"   Last hash: {last_processed['transactionHash'][:16]}...")
+            print(f"[DATA] Resuming from: {last_processed['timestamp']}")
+            print(f"   Last hash: {last_processed['transactionHash'][:16]}...")
     else:
-        print("⚠ No existing processed file found - processing from beginning")
+        print("[!] No existing processed file found - processing from beginning")
 
-    print(f"\n📂 Reading: goldsky/orderFilled.csv")
+    print(f"\nReading: {source_file}")
 
     schema_overrides = {
         "takerAssetId": pl.Utf8,
         "makerAssetId": pl.Utf8,
     }
 
-    df = pl.scan_csv("goldsky/orderFilled.csv", schema_overrides=schema_overrides).collect(streaming=True)
+    df = pl.scan_csv(source_file, schema_overrides=schema_overrides).collect(streaming=True)
     df = df.with_columns(
         pl.from_epoch(pl.col('timestamp'), time_unit='s').alias('timestamp')
     )
@@ -146,7 +167,7 @@ def process_live():
         )
 
         if same_timestamp.is_empty():
-            print("⚠ Last processed row not found in source data; processing all rows")
+            print("[!] Last processed row not found in source data; processing all rows")
             df_process = df.drop('index')
         else:
             df_process = df.filter(pl.col('index') > same_timestamp.row(0)[0]).drop('index')
@@ -196,15 +217,15 @@ def process_live():
 
     if not os.path.isfile(op_file):
         new_df.write_csv(op_file)
-        print(f"✓ Created new file: processed/trades.csv")
+        print(f"[OK] Created new file: processed/trades.csv")
     else:
-        print(f"✓ Appending {len(new_df):,} rows to processed/trades.csv")
+        print(f"[OK] Appending {len(new_df):,} rows to processed/trades.csv")
         with open(op_file, mode="a") as f:
             new_df.write_csv(f, include_header=False)
 
     
     print("=" * 60)
-    print("✅ Processing complete!")
+    print("Processing complete!")
     print("=" * 60)
     
 if __name__ == "__main__":

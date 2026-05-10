@@ -1,5 +1,5 @@
-name: smart_budget_tracker
-description: A smart finance app with AI suggestions.
+name: finance_tracker_empowered_with_ai
+description: Finance tracker with a Flutter app and Python backend for market analysis.
 publish_to: 'none'
 version: 1.0.0+1
 

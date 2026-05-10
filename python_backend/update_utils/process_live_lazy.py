@@ -10,6 +10,15 @@ from poly_utils.utils import get_markets, update_missing_tokens
 import subprocess
 import pandas as pd
 
+
+def _read_last_line(file_path):
+    last_line = None
+    with open(file_path, 'r', encoding='utf-8', errors='ignore') as handle:
+        for line in handle:
+            if line.strip():
+                last_line = line.strip()
+    return last_line
+
 def get_processed_df(df_lazy):
     markets_df = get_markets()
     markets_df = markets_df.rename({'id': 'market_id'})
@@ -93,17 +102,25 @@ def get_processed_df(df_lazy):
 
 def process_live():
     processed_file = 'processed/trades.csv'
+    source_file = 'goldsky/orderFilled.csv'
 
     print("=" * 60)
     print("Processing Live Trades")
     print("=" * 60)
 
+    if not os.path.exists(source_file):
+        print(f"[!] Missing source file: {source_file}")
+        return
+
+    if not (os.path.exists('markets.csv') or os.path.exists('missing_markets.csv')):
+        print("[!] Missing market metadata files: markets.csv or missing_markets.csv")
+        return
+
     last_processed = None
 
     if os.path.exists(processed_file):
-        print(f"Found existing processed file: {processed_file}")
-        result = subprocess.run(['tail', '-n', '1', processed_file], capture_output=True, text=True)
-        last_line = result.stdout.strip()
+        print(f"[OK] Found existing processed file: {processed_file}")
+        last_line = _read_last_line(processed_file)
         if last_line:
             splitted = last_line.split(',')
             last_processed = {
@@ -112,12 +129,12 @@ def process_live():
                 'maker': splitted[2],
                 'taker': splitted[3],
             }
-            print(f"Resuming from: {last_processed['timestamp']}")
+            print(f"[DATA] Resuming from: {last_processed['timestamp']}")
             print(f"   Last hash: {last_processed['transactionHash'][:16]}...")
     else:
-        print("No existing processed file found - processing from beginning")
+        print("[!] No existing processed file found - processing from beginning")
 
-    print(f"\nReading: goldsky/orderFilled.csv")
+    print(f"\nReading: {source_file}")
 
     schema_overrides = {
         "takerAssetId": pl.Utf8,
@@ -125,7 +142,7 @@ def process_live():
     }
 
     # Keep as LazyFrame for memory-efficient streaming processing
-    df_lazy = pl.scan_csv("goldsky/orderFilled.csv", schema_overrides=schema_overrides)
+    df_lazy = pl.scan_csv(source_file, schema_overrides=schema_overrides)
     df_lazy = df_lazy.with_columns(
         pl.from_epoch(pl.col('timestamp'), time_unit='s').alias('timestamp')
     )
@@ -159,7 +176,7 @@ def process_live():
         )
 
         if same_timestamp.is_empty():
-            print("Last processed row not found in recent data; processing all filtered rows")
+            print("[!] Last processed row not found in recent data; processing all filtered rows")
             df_process = df_recent.drop('index')
         else:
             # Find the last processed row and extract new data after it
@@ -171,11 +188,11 @@ def process_live():
         if len(df_process) > 0:
             # Append processed new rows to existing file
             new_df = get_processed_df(df_process.lazy()).collect()
-            print(f"Appending {len(new_df):,} rows to {op_file}")
+            print(f"[OK] Appending {len(new_df):,} rows to {op_file}")
             with open(op_file, mode="a") as f:
                 new_df.write_csv(f, include_header=False)
         else:
-            print("No new rows to process.")
+            print("[!] No new rows to process.")
 
     print("=" * 60)
     print("Processing complete!")

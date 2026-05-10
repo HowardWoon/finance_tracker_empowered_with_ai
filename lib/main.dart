@@ -8,14 +8,12 @@ import 'package:http/http.dart' as http; // For AI Connection
 import 'package:flutter_markdown/flutter_markdown.dart'; // For nice AI text
 import 'database_helper.dart';
 
-// --- !!! PASTE YOUR API KEY HERE !!! ---
-const String apiKey = "AIzaSyDplGXumkldSduvWRLjmtkeGusDfF9RX1I"; 
-// ---------------------------------------
+const String apiKey = String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
 
 void main() {
   runApp(const MaterialApp(
     debugShowCheckedModeBanner: false,
-    title: "Smart Budget AI",
+    title: "Finance Tracker Empowered With AI",
     home: SmartFinanceHome(),
   ));
 }
@@ -72,6 +70,12 @@ class _SmartFinanceHomeState extends State<SmartFinanceHome> {
   Future<void> _askGeminiAI() async {
     final userQuestion = chatController.text;
     if (userQuestion.isEmpty) return;
+    if (apiKey.isEmpty) {
+      setState(() {
+        _aiResponse = "AI key not configured. Provide GEMINI_API_KEY at build time to enable this feature.";
+      });
+      return;
+    }
 
     setState(() {
       _isAiLoading = true;
@@ -223,7 +227,7 @@ class _SmartFinanceHomeState extends State<SmartFinanceHome> {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: Text('Smart Budget AI', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+        title: Text('Finance Tracker Empowered With AI', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.blueAccent,
         foregroundColor: Colors.white,
         actions: [
@@ -237,7 +241,6 @@ class _SmartFinanceHomeState extends State<SmartFinanceHome> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // --- AI CHAT CARD (NEW!) ---
             Container(
               margin: const EdgeInsets.all(16),
               padding: const EdgeInsets.all(16),
